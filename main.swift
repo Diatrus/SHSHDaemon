@@ -12,7 +12,8 @@ func request(body: [String : String], _ completion: @escaping ((_ success: Bool,
     do {
         request.httpBody = try JSONSerialization.data(withJSONObject: body, options: .prettyPrinted)
     } catch let error {
-        fatalError(error.localizedDescription)
+        print(error.localizedDescription)
+        exit(1)
     }
 
     request.addValue("text/plain;charset=UTF-8", forHTTPHeaderField: "Content-Type")
@@ -29,7 +30,8 @@ func request(body: [String : String], _ completion: @escaping ((_ success: Bool,
 guard let ecid = MGCopyAnswer("UniqueChipID" as CFString),
 let device = MGCopyAnswer("ProductType" as CFString),
 let board = MGCopyAnswer("HWModelStr" as CFString) else {
-    fatalError("Can't read device values")
+    print("Can't read device values")
+    exit(1)
 }
 
 let ecidInt = ecid.takeRetainedValue() as! Int // Decimal ECID
@@ -71,19 +73,23 @@ if nonce_d != "" {
 }
 
 request(body: parameters) { success, data in
-    guard success else {
-        fatalError("Request to TSSSaver was unsuccessful")
+    guard success,
+      let data = data else {
+        print("Request to TSSSaver was unsuccessful")
+        exit(1)
     }
     do {
-        if let json = try JSONSerialization.jsonObject(with: data!, options: []) as? [String: Any] {
+        if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
             guard let link = json["url"] as? String else {
-                fatalError("TSSSaver didn't return as expected \(json)")
+                print("TSSSaver didn't return as expected \(json)")
+                exit(1)
             }
             print("Link to blobs: \(link)")
             exit(0)
         }
     } catch {
-        fatalError("Parser error")
+        print("Parser error")
+        exit(1)
     }
 }
 
