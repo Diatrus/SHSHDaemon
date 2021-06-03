@@ -18,8 +18,11 @@ func request(body: [String : String], _ completion: @escaping ((_ success: Bool,
 
     request.addValue("text/plain;charset=UTF-8", forHTTPHeaderField: "Content-Type")
     request.addValue("*/*", forHTTPHeaderField: "Accept")
+    
+    let config = URLSessionConfiguration.default
+    config.waitsForConnectivity = true
 
-    URLSession.shared.dataTask(with: request) { data, _, _ -> Void in
+    URLSession(configuration: config).dataTask(with: request) { data, _, _ -> Void in
         if let data = data {
             return completion(true, data)
         }
