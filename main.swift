@@ -12,6 +12,21 @@ var generator: UInt64 = 0
 var generatorStr : String = ""
 var nonceStr : String = ""
 
+func isEntangled() -> Bool {
+    let matching = IOServiceMatching("IOPlatformExpertDevice")
+    let service = IOServiceGetMatchingService(kIOMasterPortDefault, matching)
+    if (service == 0) { return false }
+    let engtangleNonceData = IORegistryEntrySearchCFProperty(service, kIODeviceTreePlane, "entangle-nonce" as NSString, kCFAllocatorDefault, UInt32(kIORegistryIterateRecursively))
+
+    if (engtangleNonceData == nil) {
+        IOObjectRelease(service)
+        return false
+    }
+
+    IOObjectRelease(service)
+    return true
+}
+
 func request(body: [String : String], _ completion: @escaping ((_ success: Bool, _ data: Data?) -> Void)) {
     var request = URLRequest(url: URL(string: "https://tsssaver.1conan.com/v2/api/save.php")!)
     request.httpMethod = "POST"
@@ -37,13 +52,13 @@ func request(body: [String : String], _ completion: @escaping ((_ success: Bool,
     }.resume()
 }
 
-if (dimentio_preinit(&generator, false, nonce_d, &nonce_d_sz) == KERN_SUCCESS || (dimentio_init(0, nil, nil) == KERN_SUCCESS && dimentio(&generator, false, nonce_d, &nonce_d_sz) == KERN_SUCCESS)) {
+if (isEntangled() && (dimentio_preinit(&generator, false, nonce_d, &nonce_d_sz) == KERN_SUCCESS || (dimentio_init(0, nil, nil) == KERN_SUCCESS && dimentio(&generator, false, nonce_d, &nonce_d_sz) == KERN_SUCCESS))) {
     generatorStr = "0x" + String(generator, radix:16).uppercased()
     let buffer = UnsafeBufferPointer(start: nonce_d, count: nonce_d_sz)
     nonceStr = buffer.map { String(format: "%02X", $0) }.joined()
-    print("libdimentio success\nproceeding with current generator (\(generatorStr)) and nonce (\(nonceStr))")
+    print("libdimentio success\nProceeding with current generator (\(generatorStr)) and nonce (\(nonceStr))")
 } else {
-    print("libdimentio failed, proceeding without current generator and nonce")
+    print("Not using libdimentio (A11 and below)\nProceeding without current generator and nonce")
 }
 dimentio_term()
 free(nonce_d)
