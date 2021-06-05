@@ -76,8 +76,7 @@ let boardString = board.takeRetainedValue() as! String // J27AP
 
 var parameters = ["ecid": "\(ecidInt)",
                   "deviceIdentifier": deviceString,
-                  "boardConfig": boardString,
-                  "captchaResponse": ""]
+                  "boardConfig": boardString]
 
 if !nonceStr.isEmpty && !generatorStr.isEmpty {
     parameters["apnonce"] = nonceStr
