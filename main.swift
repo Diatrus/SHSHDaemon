@@ -1,9 +1,16 @@
-// Thanks to 1conan's TSSSaver
+// Thanks to 1conan's TSSSaver and 0x7ff's libdimentio
 
 import Foundation
 
 @_silgen_name("MGCopyAnswer")
 func MGCopyAnswer(_: CFString) -> Optional<Unmanaged<CFPropertyList>>
+
+var nonce_d = UnsafeMutablePointer<UInt8>.allocate(capacity: Int(CC_SHA384_DIGEST_LENGTH))
+var ret: CInt = EXIT_FAILURE
+var nonce_d_sz: size_t = 0
+var generator: UInt64 = 0
+var generatorStr : String = ""
+var nonceStr : String = ""
 
 func request(body: [String : String], _ completion: @escaping ((_ success: Bool, _ data: Data?) -> Void)) {
     var request = URLRequest(url: URL(string: "https://tsssaver.1conan.com/v2/api/save.php")!)
@@ -30,6 +37,17 @@ func request(body: [String : String], _ completion: @escaping ((_ success: Bool,
     }.resume()
 }
 
+if (dimentio_preinit(&generator, false, nonce_d, &nonce_d_sz) == KERN_SUCCESS || (dimentio_init(0, nil, nil) == KERN_SUCCESS && dimentio(&generator, false, nonce_d, &nonce_d_sz) == KERN_SUCCESS)) {
+    generatorStr = "0x" + String(generator, radix:16).uppercased()
+    let buffer = UnsafeBufferPointer(start: nonce_d, count: nonce_d_sz)
+    nonceStr = buffer.map { String(format: "%02X", $0) }.joined()
+    print("libdimentio success\nproceeding with current generator (\(generatorStr)) and nonce (\(nonceStr))")
+} else {
+    print("libdimentio failed, proceeding without current generator and nonce")
+}
+dimentio_term()
+free(nonce_d)
+
 guard let ecid = MGCopyAnswer("UniqueChipID" as CFString),
 let device = MGCopyAnswer("ProductType" as CFString),
 let board = MGCopyAnswer("HWModelStr" as CFString) else {
@@ -41,38 +59,14 @@ let ecidInt = ecid.takeRetainedValue() as! Int // Decimal ECID
 let deviceString = device.takeRetainedValue() as! String // iPad8,11
 let boardString = board.takeRetainedValue() as! String // J27AP
 
-let pipe = Pipe()
-let task = NSTask()
-task.setLaunchPath("/usr/bin/dimentio")
-task.setStandardOutput(pipe)
-task.launch()
-
-let outputData = pipe.fileHandleForReading.readDataToEndOfFile()
-let output = String(decoding: outputData, as: UTF8.self)
-let outputSplit = output.split(whereSeparator: \.isNewline)
-
-let outputSlice = outputSplit.suffix(2)
-let neededOutput = Array(outputSlice)
-
-var nonce_d = ""
-var generator = ""
-
-for n in 0...1 {
-    if let range = neededOutput[n].range(of: "nonce_d:") {
-        nonce_d = neededOutput[n][range.upperBound...].trimmingCharacters(in: .whitespaces)
-    } else if let range = neededOutput[n].range(of: "Current nonce is") {
-        generator = neededOutput[n][range.upperBound...].trimmingCharacters(in: .whitespaces)
-    }
-}
-
 var parameters = ["ecid": "\(ecidInt)",
                   "deviceIdentifier": deviceString,
                   "boardConfig": boardString,
                   "captchaResponse": ""]
 
-if nonce_d != "" {
-    parameters["apnonce"] = nonce_d
-    parameters["generator"] = generator
+if !nonceStr.isEmpty && !generatorStr.isEmpty {
+    parameters["apnonce"] = nonceStr
+    parameters["generator"] = generatorStr
 }
 
 request(body: parameters) { success, data in
