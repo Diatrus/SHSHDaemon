@@ -18,9 +18,9 @@ func isEntangled() -> Bool {
     defer { IOObjectRelease(service) }
     
     if (service == 0) { return false }
-    guard let engtangleNonceData = IORegistryEntrySearchCFProperty(
+    guard IORegistryEntrySearchCFProperty(
         service, kIODeviceTreePlane, "entangle-nonce" as NSString, kCFAllocatorDefault, UInt32(kIORegistryIterateRecursively)
-    ) else {
+    ) != nil else {
         return false
     }
     
@@ -30,20 +30,20 @@ func isEntangled() -> Bool {
 func request(body: [String : String], _ completion: @escaping ((_ success: Bool, _ data: Data?) -> Void)) {
     var request = URLRequest(url: URL(string: "https://tsssaver.1conan.com/v2/api/save.php")!)
     request.httpMethod = "POST"
-
+    
     do {
         request.httpBody = try JSONSerialization.data(withJSONObject: body, options: .prettyPrinted)
     } catch let error {
         print(error.localizedDescription)
         exit(1)
     }
-
+    
     request.addValue("text/plain;charset=UTF-8", forHTTPHeaderField: "Content-Type")
     request.addValue("*/*", forHTTPHeaderField: "Accept")
     
     let config = URLSessionConfiguration.default
     config.waitsForConnectivity = true
-
+    
     URLSession(configuration: config).dataTask(with: request) { data, _, _ -> Void in
         if let data = data {
             return completion(true, data)
@@ -64,11 +64,11 @@ dimentio_term()
 free(nonce_d)
 
 guard let ecid = MGCopyAnswer("UniqueChipID" as CFString),
-let device = MGCopyAnswer("ProductType" as CFString),
-let board = MGCopyAnswer("HWModelStr" as CFString) else {
-    print("Can't read device values")
-    exit(1)
-}
+      let device = MGCopyAnswer("ProductType" as CFString),
+      let board = MGCopyAnswer("HWModelStr" as CFString) else {
+          print("Can't read device values")
+          exit(1)
+      }
 
 let ecidInt = ecid.takeRetainedValue() as! Int // Decimal ECID
 let deviceString = device.takeRetainedValue() as! String // iPad8,11
@@ -85,10 +85,10 @@ if !nonceStr.isEmpty && !generatorStr.isEmpty {
 
 request(body: parameters) { success, data in
     guard success,
-      let data = data else {
-        print("Request to TSSSaver was unsuccessful")
-        exit(1)
-    }
+          let data = data else {
+              print("Request to TSSSaver was unsuccessful")
+              exit(1)
+          }
     do {
         if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
             guard let link = json["url"] as? String else {
