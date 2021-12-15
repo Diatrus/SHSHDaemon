@@ -15,15 +15,15 @@ var nonceStr : String = ""
 func isEntangled() -> Bool {
     let matching = IOServiceMatching("IOPlatformExpertDevice")
     let service = IOServiceGetMatchingService(kIOMasterPortDefault, matching)
+    defer { IOObjectRelease(service) }
+    
     if (service == 0) { return false }
-    let engtangleNonceData = IORegistryEntrySearchCFProperty(service, kIODeviceTreePlane, "entangle-nonce" as NSString, kCFAllocatorDefault, UInt32(kIORegistryIterateRecursively))
-
-    if (engtangleNonceData == nil) {
-        IOObjectRelease(service)
+    guard let engtangleNonceData = IORegistryEntrySearchCFProperty(
+        service, kIODeviceTreePlane, "entangle-nonce" as NSString, kCFAllocatorDefault, UInt32(kIORegistryIterateRecursively)
+    ) else {
         return false
     }
-
-    IOObjectRelease(service)
+    
     return true
 }
 
