@@ -1,6 +1,6 @@
 // Thanks to 1conan's TSSSaver and 0x7ff's libdimentio
 
-import Foundation
+import UIKit
 
 @_silgen_name("MGCopyAnswer")
 func MGCopyAnswer(_: CFString) -> Optional<Unmanaged<CFPropertyList>>
@@ -96,6 +96,10 @@ request(body: parameters) { success, data in
                 exit(1)
             }
             print("Link to blobs: \(link)")
+            if CommandLine.arguments.contains("--copy") || CommandLine.arguments.contains("-c") {
+                UIPasteboard.general.string = link
+                print("Copied link to clipboard.")
+            }
             exit(0)
         }
     } catch {
