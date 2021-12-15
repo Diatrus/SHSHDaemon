@@ -96,7 +96,7 @@ request(body: parameters) { success, data in
                 exit(1)
             }
             print("Link to blobs: \(link)")
-            if CommandLine.arguments.contains("--copy") || CommandLine.arguments.contains("-c") {
+            if CommandLine.arguments.contains("--copy-link") || CommandLine.arguments.contains("-c") {
                 UIPasteboard.general.string = link
                 print("Copied link to clipboard.")
             }
