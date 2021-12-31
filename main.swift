@@ -6,11 +6,10 @@ import UIKit
 func MGCopyAnswer(_: CFString) -> Optional<Unmanaged<CFPropertyList>>
 
 var nonce_d = UnsafeMutablePointer<UInt8>.allocate(capacity: Int(CC_SHA384_DIGEST_LENGTH))
-var ret: CInt = EXIT_FAILURE
 var nonce_d_sz: size_t = 0
 var generator: UInt64 = 0
-var generatorStr : String = ""
-var nonceStr : String = ""
+var generatorStr: String?
+var nonceStr: String?
 
 func isEntangled() -> Bool {
     let matching = IOServiceMatching("IOPlatformExpertDevice")
@@ -56,10 +55,14 @@ if (isEntangled() && (dimentio_preinit(&generator, false, nonce_d, &nonce_d_sz) 
     generatorStr = "0x" + String(generator, radix:16).uppercased()
     let buffer = UnsafeBufferPointer(start: nonce_d, count: nonce_d_sz)
     nonceStr = buffer.map { String(format: "%02X", $0) }.joined()
+}
+
+if let generatorStr = generatorStr, let nonceStr = nonceStr {
     print("libdimentio success\nProceeding with current generator (\(generatorStr)) and nonce (\(nonceStr))")
 } else {
     print("Not using libdimentio (A11 and below)\nProceeding without current generator and nonce")
 }
+
 dimentio_term()
 free(nonce_d)
 
@@ -78,7 +81,7 @@ var parameters = ["ecid": "\(ecidInt)",
                   "deviceIdentifier": deviceString,
                   "boardConfig": boardString]
 
-if !nonceStr.isEmpty && !generatorStr.isEmpty {
+if let nonceStr = nonceStr, let generatorStr = generatorStr {
     parameters["apnonce"] = nonceStr
     parameters["generator"] = generatorStr
 }
