@@ -13,18 +13,33 @@ var generatorStr : String = ""
 var nonceStr : String = ""
 
 func isEntangled() -> Bool {
-    let matching = IOServiceMatching("IOPlatformExpertDevice")
-    let service = IOServiceGetMatchingService(kIOMasterPortDefault, matching)
-    if (service == 0) { return false }
-    let engtangleNonceData = IORegistryEntrySearchCFProperty(service, kIODeviceTreePlane, "entangle-nonce" as NSString, kCFAllocatorDefault, UInt32(kIORegistryIterateRecursively))
+    let matching = IOServiceMatching("IOPlatformDevice")
+    var matchingServices: io_iterator_t = 0
+    if IOServiceGetMatchingServices(kIOMainPortDefault, matching, &matchingServices) == KERN_SUCCESS {
+        while true {
+            let service = IOIteratorNext(matchingServices)
+            if service == 0 {
+                break
+            }
 
-    if (engtangleNonceData == nil) {
-        IOObjectRelease(service)
-        return false
+            var propertiesPtr: Unmanaged<CFMutableDictionary>?
+            IORegistryEntryCreateCFProperties(service, &propertiesPtr, kCFAllocatorDefault, 0)
+
+            if let cfProperties = propertiesPtr {
+                if let properties = cfProperties.takeRetainedValue() as? [AnyHashable: Any] {
+                    if let nameData = properties["name"] as? Data,
+                       let name = String(data: nameData, encoding: .utf8),
+                        name == "defaults\0" {
+                        if properties["entangle-nonce"] != nil {
+                            return true
+                        }
+                    }
+                }
+            }
+            IOObjectRelease(service)
+        }
     }
-
-    IOObjectRelease(service)
-    return true
+    return false
 }
 
 func request(body: [String : String], _ completion: @escaping ((_ success: Bool, _ data: Data?) -> Void)) {
